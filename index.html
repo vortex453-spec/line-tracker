@@ -34,7 +34,7 @@ button:disabled,button.red:disabled,button.green:disabled,button.grey:disabled,b
  <g id="bands"></g>
  <g id="marks"></g>
 </svg>
-<div class="hint">Tap the orange track to drop a marker. Solid = where it is now. Flashing = where it will be at the time you pick. Tap a marker to see its details.</div>
+<div class="hint">Tap the track to drop a marker. Solid = where it is now. Flashing = where it will be at the time you pick. Tap a marker to see its details.</div>
 <div id="sel" class="big"></div>
 </div>
 
@@ -93,7 +93,7 @@ function nearest(x,y){let b=1e18,bi=0;for(let i=0;i<NP;i++){const d=(P[i][0]-x)*
 function sectionOf(t){if(t<0)return 'Returning to Loading';if(t<0.5)return 'Loading';if(t>=TEND)return t<TEND+0.5?'Unloading':'Returning to Loading';
  for(let i=0;i<NS;i++)if(t<CT[i+1])return SEC[i];return '';}
 const BASE=1.2;
-const COLS=['#00e5ff','#ff00ff','#76ff03','#2979ff','#b04dff','#ffffff','#ffea00','#00e676'];const col=i=>COLS[i%COLS.length];
+const COLS=['#ff9100','#ff00ff','#76ff03','#ffea00','#b04dff','#ffffff','#00e676','#f48fb1'];const col=i=>COLS[i%COLS.length];
 // ---- saved state (per device) ----
 let markers=JSON.parse(localStorage.getItem('vpl_markers')||'[]'); // {t0: base minutes at drop, lc: line-clock ms at drop, hung: wall ms}
 let speed=parseFloat(localStorage.getItem('plt_speed')||'1.2');document.getElementById('speed').value=speed;
@@ -120,8 +120,8 @@ const bandFront=(B,w)=>bandAdv(B.f,B.flc,w),bandBack=(B,w)=>B.b===null?0:bandAdv
 function bandPath(t1,t2){const s1=tToS(t1),s2=tToS(t2);let a=sToXY(s1),d=`M${a[0].toFixed(1)},${a[1].toFixed(1)}`;
  for(let i=0;i<NP;i++)if(D[i]>s1&&D[i]<s2)d+=`L${P[i][0]},${P[i][1]}`;const b=sToXY(s2);return d+`L${b[0].toFixed(1)},${b[1].toFixed(1)}`;}
 function drawBands(now){bands=bands.filter(B=>bandBack(B,now)<TEND-1e-6);let h='',fh='';
- bands.forEach(B=>{const f=bandFront(B,now),k=bandBack(B,now);if(f>k)h+=`<path d="${bandPath(k,f)}" fill="none" stroke="#4CC8DC" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>`;
-  if(viewTime!==null&&viewTime>=now){const ff=bandFront(B,viewTime),fk=bandBack(B,viewTime);if(ff>fk&&fk<TEND-1e-6)fh+=(d=>`<path d="${d}" stroke="#fff" stroke-width="21"/><path d="${d}" stroke="#0b4f5c" stroke-width="15"/><path d="${d}" stroke="#4CC8DC" stroke-width="9" stroke-dasharray="22 12"/>`)(bandPath(fk,ff));}});
+ bands.forEach(B=>{const f=bandFront(B,now),k=bandBack(B,now);if(f>k)h+=(d=>`<path d="${d}" fill="none" stroke="#4a0b0b" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#E53935" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>`)(bandPath(k,f));
+  if(viewTime!==null&&viewTime>=now){const ff=bandFront(B,viewTime),fk=bandBack(B,viewTime);if(ff>fk&&fk<TEND-1e-6)fh+=(d=>`<path d="${d}" stroke="#fff" stroke-width="21"/><path d="${d}" stroke="#4a0b0b" stroke-width="15"/><path d="${d}" stroke="#E53935" stroke-width="9" stroke-dasharray="22 12"/>`)(bandPath(fk,ff));}});
  if(fh)h+=`<g class="flash2" style="animation-delay:-${Date.now()%1200}ms" fill="none" stroke-linecap="round" stroke-linejoin="round">${fh}</g>`;
  const bg=document.getElementById('bands');if(bg.__h!==h){bg.innerHTML=h;bg.__h=h;}const act=bands.some(B=>B.b===null);
  document.getElementById('lstart').disabled=act;document.getElementById('lstop').disabled=!act;document.getElementById('lreset').disabled=!bands.length;}
@@ -143,7 +143,7 @@ const nb=bands.length;drawBands(now);if(bands.length!==nb)save();marksG.innerHTM
  const pz=PS.at!==null;document.getElementById('pausebar').style.display=pz?'block':'none';
  const pb=document.getElementById('pause');pb.textContent=pz?'Resume line':'Pause line';pb.className=pz?'green':'amber';
  document.getElementById('ptimer').textContent=hms(pausedTotal(now));
- document.getElementById('status').innerHTML=viewTime!==null?`Solid = now (${fmt(new Date())}). Flashing = <b>${fmtD(new Date(viewTime))}</b>${bands.length?' (flashing blue = loading then)':''}${pz?' (assumes the line stays paused)':''}`:`Live: <b>${fmt(new Date())}</b>`;}
+ document.getElementById('status').innerHTML=viewTime!==null?`Solid = now (${fmt(new Date())}). Flashing = <b>${fmtD(new Date(viewTime))}</b>${bands.length?' (flashing red = loading then)':''}${pz?' (assumes the line stays paused)':''}`:`Live: <b>${fmt(new Date())}</b>`;}
 window.delM=i=>{markers.splice(i,1);selIdx=null;save();draw();};
 svg.addEventListener('click',e=>{const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const p=pt.matrixTransform(svg.getScreenCTM().inverse());
  for(let i=0;i<curXY.length;i++){const q=curXY[i];if(q&&Math.hypot(q[0]-p.x,q[1]-p.y)<26){selIdx=i;draw();const el=document.getElementById('mk'+i);return;}}

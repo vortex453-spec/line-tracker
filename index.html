@@ -9,6 +9,7 @@
 header{background:#1f3b57;color:#fff;padding:10px 14px;font-size:18px;font-weight:600}
 .wrap{max-width:560px;margin:0 auto;padding:8px}
 .card{background:#fff;border-radius:12px;padding:10px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+@keyframes fl2{0%,100%{opacity:1}50%{opacity:.3}}.flash2{animation:fl2 1.2s infinite}
 @keyframes fl{0%,100%{opacity:1}50%{opacity:.1}}.flash{animation:fl 1s infinite}
 svg{width:100%;height:auto;display:block;touch-action:manipulation}
 label{font-size:14px;color:#555}
@@ -118,10 +119,11 @@ const bandAdv=(t0,lc0,w)=>Math.min(TEND,t0+(lineClock(w)-lc0)/60000*speed/BASE);
 const bandFront=(B,w)=>bandAdv(B.f,B.flc,w),bandBack=(B,w)=>B.b===null?0:bandAdv(B.b,B.blc,w);
 function bandPath(t1,t2){const s1=tToS(t1),s2=tToS(t2);let a=sToXY(s1),d=`M${a[0].toFixed(1)},${a[1].toFixed(1)}`;
  for(let i=0;i<NP;i++)if(D[i]>s1&&D[i]<s2)d+=`L${P[i][0]},${P[i][1]}`;const b=sToXY(s2);return d+`L${b[0].toFixed(1)},${b[1].toFixed(1)}`;}
-function drawBands(now){bands=bands.filter(B=>bandBack(B,now)<TEND-1e-6);let h='';
+function drawBands(now){bands=bands.filter(B=>bandBack(B,now)<TEND-1e-6);let h='',fh='';
  bands.forEach(B=>{const f=bandFront(B,now),k=bandBack(B,now);if(f>k)h+=`<path d="${bandPath(k,f)}" fill="none" stroke="#4CC8DC" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>`;
-  if(viewTime!==null&&viewTime>=now){const ff=bandFront(B,viewTime),fk=bandBack(B,viewTime);if(ff>fk&&fk<TEND-1e-6)h+=`<path class="flash" d="${bandPath(fk,ff)}" fill="none" stroke="#4CC8DC" stroke-opacity=".65" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>`;}});
- document.getElementById('bands').innerHTML=h;const act=bands.some(B=>B.b===null);
+  if(viewTime!==null&&viewTime>=now){const ff=bandFront(B,viewTime),fk=bandBack(B,viewTime);if(ff>fk&&fk<TEND-1e-6)fh+=(d=>`<path d="${d}" stroke="#fff" stroke-width="21"/><path d="${d}" stroke="#0b4f5c" stroke-width="15"/><path d="${d}" stroke="#4CC8DC" stroke-width="9" stroke-dasharray="22 12"/>`)(bandPath(fk,ff));}});
+ if(fh)h+=`<g class="flash2" style="animation-delay:-${Date.now()%1200}ms" fill="none" stroke-linecap="round" stroke-linejoin="round">${fh}</g>`;
+ const bg=document.getElementById('bands');if(bg.__h!==h){bg.innerHTML=h;bg.__h=h;}const act=bands.some(B=>B.b===null);
  document.getElementById('lstart').disabled=act;document.getElementById('lstop').disabled=!act;document.getElementById('lreset').disabled=!bands.length;}
 let curXY=[];
 function draw(){const now=Date.now();
@@ -169,5 +171,7 @@ info2();setInterval(draw,1000);draw();
  const hit=k=>fetch(A+k,{cache:'no-store',mode:'cors',credentials:'omit'});
  hit('opens').catch(()=>{});
  if(!localStorage.getItem('vpl_counted'))hit('installs').then(r=>{if(r.ok)localStorage.setItem('vpl_counted','1');}).catch(()=>{});}catch(e){}})();
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+if('serviceWorker' in navigator){const had=!!navigator.serviceWorker.controller;let done=false;
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!done){done=true;location.reload();}});
+ navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});}
 </script></body></html>

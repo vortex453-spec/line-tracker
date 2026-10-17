@@ -16,7 +16,7 @@ label{font-size:14px;color:#555}
 input,select,button{font-size:16px;padding:7px 8px;border:1px solid #bbb;border-radius:8px;background:#fff}
 input[type=number]{width:80px}
 button{background:#1f6fd1;color:#fff;border:none}
-button:disabled{opacity:.4}button.grey{background:#777}button.red{background:#c62828}button.green{background:#2e7d32}button.amber{background:#e65100}
+button:disabled,button.red:disabled,button.green:disabled,button.grey:disabled,button.amber:disabled{background:#bdbdbd;color:#f5f5f5;cursor:default}button.grey{background:#777}button.red{background:#c62828}button.green{background:#2e7d32}button.amber{background:#e65100}
 .big{font-size:15px;line-height:1.5}
 .mk{border-top:1px solid #eee;padding:6px 0;font-size:14px}.mk.sel{background:#fff8e1}
 .sw{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid #111;vertical-align:-2px;margin-right:4px}
@@ -41,8 +41,11 @@ button:disabled{opacity:.4}button.grey{background:#777}button.red{background:#c6
  <div class="row"><button id="pause" class="amber">Pause line</button>
   <span>Paused total: <span id="ptimer">0:00:00</span></span>
   <button id="preset" class="grey">Reset paused time</button></div>
- <div class="row"><b style="font-size:15px">Loading</b><button id="lstart" class="green">Start loading</button><button id="lstop" class="amber">Stop loading</button><button id="lreset" class="grey">Reset</button></div>
  <div class="hint">While paused, every marker stops and its times move back by however long the line is stopped.</div>
+</div>
+
+<div class="card">
+ <div class="row"><button id="lstart" class="green">Start loading</button><button id="lstop" class="red">Stop loading</button><button id="lreset" class="grey">Reset</button></div>
 </div>
 
 <div class="card">

@@ -119,7 +119,8 @@ const bandFront=(B,w)=>bandAdv(B.f,B.flc,w),bandBack=(B,w)=>B.b===null?0:bandAdv
 function bandPath(t1,t2){const s1=tToS(t1),s2=tToS(t2);let a=sToXY(s1),d=`M${a[0].toFixed(1)},${a[1].toFixed(1)}`;
  for(let i=0;i<NP;i++)if(D[i]>s1&&D[i]<s2)d+=`L${P[i][0]},${P[i][1]}`;const b=sToXY(s2);return d+`L${b[0].toFixed(1)},${b[1].toFixed(1)}`;}
 function drawBands(now){bands=bands.filter(B=>bandBack(B,now)<TEND-1e-6);let h='';
- bands.forEach(B=>{const f=bandFront(B,now),k=bandBack(B,now);if(f>k)h+=`<path d="${bandPath(k,f)}" fill="none" stroke="#4CC8DC" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>`;});
+ bands.forEach(B=>{const f=bandFront(B,now),k=bandBack(B,now);if(f>k)h+=`<path d="${bandPath(k,f)}" fill="none" stroke="#4CC8DC" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if(viewTime!==null&&viewTime>=now){const ff=bandFront(B,viewTime),fk=bandBack(B,viewTime);if(ff>fk&&fk<TEND-1e-6)h+=`<path class="flash" d="${bandPath(fk,ff)}" fill="none" stroke="#4CC8DC" stroke-opacity=".65" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>`;}});
  document.getElementById('bands').innerHTML=h;const act=bands.some(B=>B.b===null);
  document.getElementById('lstart').disabled=act;document.getElementById('lstop').disabled=!act;document.getElementById('lreset').disabled=!bands.length;}
 let curXY=[];
@@ -140,7 +141,7 @@ const nb=bands.length;drawBands(now);if(bands.length!==nb)save();marksG.innerHTM
  const pz=PS.at!==null;document.getElementById('pausebar').style.display=pz?'block':'none';
  const pb=document.getElementById('pause');pb.textContent=pz?'Resume line':'Pause line';pb.className=pz?'green':'amber';
  document.getElementById('ptimer').textContent=hms(pausedTotal(now));
- document.getElementById('status').innerHTML=viewTime!==null?`Solid = now (${fmt(new Date())}). Flashing = <b>${fmtD(new Date(viewTime))}</b>${pz?' (assumes the line stays paused)':''}`:`Live: <b>${fmt(new Date())}</b>`;}
+ document.getElementById('status').innerHTML=viewTime!==null?`Solid = now (${fmt(new Date())}). Flashing = <b>${fmtD(new Date(viewTime))}</b>${bands.length?' (flashing blue = loading then)':''}${pz?' (assumes the line stays paused)':''}`:`Live: <b>${fmt(new Date())}</b>`;}
 window.delM=i=>{markers.splice(i,1);selIdx=null;save();draw();};
 svg.addEventListener('click',e=>{const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const p=pt.matrixTransform(svg.getScreenCTM().inverse());
  for(let i=0;i<curXY.length;i++){const q=curXY[i];if(q&&Math.hypot(q[0]-p.x,q[1]-p.y)<26){selIdx=i;draw();const el=document.getElementById('mk'+i);return;}}

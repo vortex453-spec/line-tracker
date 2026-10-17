@@ -16,7 +16,7 @@ label{font-size:14px;color:#555}
 input,select,button{font-size:16px;padding:7px 8px;border:1px solid #bbb;border-radius:8px;background:#fff}
 input[type=number]{width:80px}
 button{background:#1f6fd1;color:#fff;border:none}
-button.grey{background:#777}button.red{background:#c62828}button.green{background:#2e7d32}button.amber{background:#e65100}
+button:disabled{opacity:.4}button.grey{background:#777}button.red{background:#c62828}button.green{background:#2e7d32}button.amber{background:#e65100}
 .big{font-size:15px;line-height:1.5}
 .mk{border-top:1px solid #eee;padding:6px 0;font-size:14px}.mk.sel{background:#fff8e1}
 .sw{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid #111;vertical-align:-2px;margin-right:4px}
@@ -30,6 +30,7 @@ button.grey{background:#777}button.red{background:#c62828}button.green{backgroun
 <div id="pausebar">LINE PAUSED</div>
 <svg id="svg" viewBox="0 0 1051 1886">
  <image href="vpl.png" x="0" y="0" width="1051" height="1886"/>
+ <g id="bands"></g>
  <g id="marks"></g>
 </svg>
 <div class="hint">Tap the orange track to drop a marker. Solid = where it is now. Flashing = where it will be at the time you pick. Tap a marker to see its details.</div>
@@ -40,6 +41,7 @@ button.grey{background:#777}button.red{background:#c62828}button.green{backgroun
  <div class="row"><button id="pause" class="amber">Pause line</button>
   <span>Paused total: <span id="ptimer">0:00:00</span></span>
   <button id="preset" class="grey">Reset paused time</button></div>
+ <div class="row"><b style="font-size:15px">Loading</b><button id="lstart" class="green">Start loading</button><button id="lstop" class="amber">Stop loading</button><button id="lreset" class="grey">Reset</button></div>
  <div class="hint">While paused, every marker stops and its times move back by however long the line is stopped.</div>
 </div>
 
@@ -92,8 +94,9 @@ const COLS=['#00e5ff','#ff00ff','#76ff03','#2979ff','#b04dff','#ffffff','#ffea00
 let markers=JSON.parse(localStorage.getItem('vpl_markers')||'[]'); // {t0: base minutes at drop, lc: line-clock ms at drop, hung: wall ms}
 let speed=parseFloat(localStorage.getItem('plt_speed')||'1.2');document.getElementById('speed').value=speed;
 let PS=JSON.parse(localStorage.getItem('vpl_pause')||'{"acc":0,"at":null,"base":0}'); // acc = all paused ms ever, at = pause start, base = acc at last reset
+let bands=JSON.parse(localStorage.getItem('vpl_bands')||'[]'); // loading bands: front f at line clock flc; back b at blc (null = still at Loading)
 let viewTime=null,selIdx=null;
-const save=()=>{localStorage.setItem('vpl_markers',JSON.stringify(markers));localStorage.setItem('plt_speed',speed);localStorage.setItem('vpl_pause',JSON.stringify(PS));};
+const save=()=>{localStorage.setItem('vpl_bands',JSON.stringify(bands));localStorage.setItem('vpl_markers',JSON.stringify(markers));localStorage.setItem('plt_speed',speed);localStorage.setItem('vpl_pause',JSON.stringify(PS));};
 // line clock = wall time minus all time spent paused (while paused it stands still)
 const lineClock=w=>{if(PS.at!==null)return PS.at-PS.acc;return w-PS.acc;};
 const pausedTotal=w=>PS.acc-PS.base+(PS.at!==null?w-PS.at:0);
@@ -108,11 +111,19 @@ function info(m,w){const t=posAt(m,w);if(t>=TGONE)return 'off the line';
   const nx=NEXT.find(x=>x[0]>t);if(nx&&nx[1]!=='Unloading')s+=`. Next: ${nx[1]} in ${mins(realMin(nx[0]-t))}`;}
  return s;}
 function dot(x,y,c,cls,lbl){return `<g class="${cls}"><circle cx="${x}" cy="${y}" r="19" fill="${c}" stroke="#111" stroke-width="5"/><text x="${x}" y="${y+8}" text-anchor="middle" font-size="22" font-weight="bold" fill="#111">${lbl}</text></g>`;}
+const bandAdv=(t0,lc0,w)=>Math.min(TEND,t0+(lineClock(w)-lc0)/60000*speed/BASE);
+const bandFront=(B,w)=>bandAdv(B.f,B.flc,w),bandBack=(B,w)=>B.b===null?0:bandAdv(B.b,B.blc,w);
+function bandPath(t1,t2){const s1=tToS(t1),s2=tToS(t2);let a=sToXY(s1),d=`M${a[0].toFixed(1)},${a[1].toFixed(1)}`;
+ for(let i=0;i<NP;i++)if(D[i]>s1&&D[i]<s2)d+=`L${P[i][0]},${P[i][1]}`;const b=sToXY(s2);return d+`L${b[0].toFixed(1)},${b[1].toFixed(1)}`;}
+function drawBands(now){bands=bands.filter(B=>bandBack(B,now)<TEND-1e-6);let h='';
+ bands.forEach(B=>{const f=bandFront(B,now),k=bandBack(B,now);if(f>k)h+=`<path d="${bandPath(k,f)}" fill="none" stroke="#4CC8DC" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>`;});
+ document.getElementById('bands').innerHTML=h;const act=bands.some(B=>B.b===null);
+ document.getElementById('lstart').disabled=act;document.getElementById('lstop').disabled=!act;document.getElementById('lreset').disabled=!bands.length;}
 let curXY=[];
 function draw(){const now=Date.now();
  // markers that have left the line (halfway back to loading) are removed for good
  if(markers.some(m=>posAt(m,now)>=TGONE)){const keep=markers.map(m=>posAt(m,now)<TGONE);if(selIdx!==null)selIdx=keep[selIdx]?keep.slice(0,selIdx).filter(Boolean).length:null;markers=markers.filter((m,i)=>keep[i]);save();}
-marksG.innerHTML='';const list=document.getElementById('list');list.innerHTML='';curXY=[];
+const nb=bands.length;drawBands(now);if(bands.length!==nb)save();marksG.innerHTML='';const list=document.getElementById('list');list.innerHTML='';curXY=[];
  markers.forEach((m,i)=>{const c=col(i);const t=posAt(m,now);let h='';
   if(t<TGONE){const [x,y]=tToXY(t);curXY[i]=[x,y];h+=dot(x,y,c,'',i+1);}
   if(viewTime!==null&&viewTime>=m.hung){const ft=posAt(m,viewTime);if(ft<TGONE){const [fx,fy]=tToXY(ft);h+=dot(fx,fy,c,'flash',i+1);}}
@@ -132,11 +143,14 @@ svg.addEventListener('click',e=>{const pt=svg.createSVGPoint();pt.x=e.clientX;pt
  for(let i=0;i<curXY.length;i++){const q=curXY[i];if(q&&Math.hypot(q[0]-p.x,q[1]-p.y)<26){selIdx=i;draw();const el=document.getElementById('mk'+i);return;}}
  const n=nearest(p.x,p.y);if(n.d>40)return;const t=sToT(n.s);if(t>=TGONE)return;const now=Date.now();
  markers.push({t0:t,lc:lineClock(now),hung:now});selIdx=markers.length-1;save();draw();});
+document.getElementById('lstart').onclick=()=>{const lc=lineClock(Date.now());bands.push({f:0,flc:lc,b:null,blc:null});save();draw();};
+document.getElementById('lstop').onclick=()=>{const lc=lineClock(Date.now());bands.forEach(B=>{if(B.b===null){B.b=0;B.blc=lc;}});save();draw();};
+document.getElementById('lreset').onclick=()=>{bands=[];save();draw();};
 document.getElementById('pause').onclick=()=>{const now=Date.now();if(PS.at===null)PS.at=now;else{PS.acc+=now-PS.at;PS.at=null;}save();draw();};
 document.getElementById('preset').onclick=()=>{if(!confirm('Reset the paused time to 0? Markers stay where they are.'))return;const now=Date.now();
  if(PS.at!==null){PS.acc+=now-PS.at;PS.at=now;}PS.base=PS.acc;save();draw();};
 document.getElementById('speed').onchange=e=>{const v=parseFloat(e.target.value);if(v>0){
- const now=Date.now();markers.forEach(m=>{m.t0=posAt(m,now);m.lc=lineClock(now);});speed=v;save();draw();info2();}};
+ const now=Date.now();markers.forEach(m=>{m.t0=posAt(m,now);m.lc=lineClock(now);});bands.forEach(B=>{const f=bandFront(B,now),k=bandBack(B,now);B.f=f;B.flc=lineClock(now);if(B.b!==null){B.b=k;B.blc=lineClock(now);}});speed=v;save();draw();info2();}};
 const hh=document.getElementById('hh'),mm=document.getElementById('mm'),ap=document.getElementById('ap');
 for(let h=1;h<=12;h++)hh.add(new Option(h,h));for(let m=0;m<60;m+=5)mm.add(new Option(String(m).padStart(2,'0'),m));
 (function(){const d=new Date();let h=d.getHours();ap.value=h>=12?'PM':'AM';hh.value=(h%12)||12;mm.value=Math.floor(d.getMinutes()/5)*5;})();

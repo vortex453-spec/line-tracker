@@ -146,5 +146,10 @@ document.getElementById('live').onclick=()=>{viewTime=null;draw();};
 document.getElementById('clear').onclick=()=>{if(confirm('Clear all markers?')){markers=[];selIdx=null;save();draw();}};
 function info2(){document.getElementById('info').innerHTML=`Loading to unloading takes ${mins(TEND*BASE/speed)} at ${speed} m/min (section times are for ${BASE} m/min). Markers leave the screen halfway along the strip between unloading and loading, about ${mins((TGONE-TEND)*BASE/speed)} after unloading.`;}
 info2();setInterval(draw,1000);draw();
+// hidden open counter (silent, never cached, ignored when offline)
+(function(){try{if(!navigator.onLine)return;const A='https://abacus.jasoncameron.dev/hit/vortex453-line-tracker/';
+ const hit=k=>fetch(A+k,{cache:'no-store',mode:'cors',credentials:'omit'});
+ hit('opens').catch(()=>{});
+ if(!localStorage.getItem('vpl_counted'))hit('installs').then(r=>{if(r.ok)localStorage.setItem('vpl_counted','1');}).catch(()=>{});}catch(e){}})();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
 </script></body></html>

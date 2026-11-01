@@ -24,6 +24,7 @@ button:disabled,button.red:disabled,button.green:disabled,button.grey:disabled,b
 .hint{font-size:13px;color:#777}
 #pausebar{display:none;background:#c62828;color:#fff;text-align:center;font-weight:600;padding:6px;border-radius:8px;margin-bottom:6px}
 #ptimer{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.bt{display:grid;grid-template-columns:auto 1fr 1fr;gap:4px 8px;align-items:center;font-size:14px}.bt input[type=time]{font-size:15px;padding:5px 2px;width:112px}.bt .st{font-weight:700;font-size:16px;font-variant-numeric:tabular-nums}.bt .soon{background:#fff3e0;color:#c62828;border-radius:6px;padding:2px 4px}details summary{font-size:13px;color:#777;cursor:pointer}
 </style></head><body>
 <header>Darryl's Line Tracker</header>
 <div class="wrap">
@@ -56,6 +57,18 @@ button:disabled,button.red:disabled,button.green:disabled,button.grey:disabled,b
  </div>
  <div class="row"><button id="show">Show</button><button id="live" class="grey">Live (now)</button></div>
  <div id="status" class="big"></div>
+</div>
+
+<div class="card"><div class="big"><b>Empty oven times</b></div>
+ <div class="bt" style="grid-template-columns:auto 1fr auto auto"><span></span><label>Empty at</label><label>Stop loading</label><label>Start loading</label>
+  <b>Oven</b><input id="btE0" type="time"><span id="btO0" class="st"></span><span id="btA0" class="st"></span>
+  <b>Pretreat</b><input id="btE1" type="time"><span id="btO1" class="st"></span><span id="btA1" class="st"></span></div>
+ <div class="hint" id="btHint"></div>
+ <details><summary>Empty chain needed</summary>
+  <div class="row"><label>Loading to oven clear</label><input id="btC0" type="number" step="1" min="1"><label>m</label></div>
+  <div class="row"><label>Oven gap</label><input id="btG0" type="number" step="1" min="1"><label>m</label></div>
+  <div class="row"><label>Loading to pretreatment clear</label><input id="btC1" type="number" step="1" min="1"><label>m</label></div>
+  <div class="row"><label>Pretreatment gap</label><input id="btG1" type="number" step="1" min="1"><label>m</label></div></details>
 </div>
 
 <div class="card"><div class="big"><b>Markers</b></div><div id="list"></div>
@@ -166,6 +179,19 @@ document.getElementById('live').onclick=()=>{viewTime=null;draw();};
 document.getElementById('clear').onclick=()=>{if(confirm('Clear all markers?')){markers=[];selIdx=null;save();draw();}};
 function info2(){document.getElementById('info').innerHTML=`Loading to unloading takes ${mins(TEND*BASE/speed)} at ${speed} m/min (section times are for ${BASE} m/min). Markers leave the screen halfway along the strip between unloading and loading, about ${mins((TGONE-TEND)*BASE/speed)} after unloading.`;}
 info2();setInterval(draw,1000);draw();
+// Break times calculator
+const BT=JSON.parse(localStorage.getItem('vpl_breaks2')||'null')||{e:['16:30','16:30'],c:[162,36],g:[36,18]};
+const btFmt=m=>{m=((Math.round(m)%1440)+1440)%1440;let h=Math.floor(m/60),mi=m%60,ap=h>=12?'pm':'am';h=h%12||12;return h+':'+String(mi).padStart(2,'0')+' '+ap;};
+const btSave=()=>{localStorage.setItem('vpl_breaks2',JSON.stringify(BT));btDraw();};
+function btDraw(){const sp=parseFloat(document.getElementById('speed').value)||speed;const d=new Date(),now=d.getHours()*60+d.getMinutes()+d.getSeconds()/60;
+ for(let i=0;i<2;i++){const [h,m]=BT.e[i].split(':').map(Number);const stop=h*60+m-BT.c[i]/sp,start=stop+BT.g[i]/sp;
+  const o=document.getElementById('btO'+i);o.textContent=btFmt(stop);const dt=stop-now;o.className='st'+(dt>=0&&dt<=5?' soon flash2':'');
+  document.getElementById('btA'+i).textContent=btFmt(start);}
+ document.getElementById('btHint').textContent=`At ${sp} m/min: oven gap ${mins(BT.g[0]/sp)}, pretreatment gap ${mins(BT.g[1]/sp)}. Stop time flashes in the last 5 minutes.`;}
+for(let i=0;i<2;i++){const e=document.getElementById('btE'+i);e.value=BT.e[i];e.onchange=()=>{if(e.value){BT.e[i]=e.value;btSave();}};
+ for(const k of ['c','g']){const f=document.getElementById('bt'+k.toUpperCase()+i);f.value=BT[k][i];f.onchange=()=>{const v=parseFloat(f.value);if(v>0){BT[k][i]=v;btSave();}};}}
+document.getElementById('speed').addEventListener('input',btDraw);document.getElementById('speed').addEventListener('change',btDraw);
+btDraw();setInterval(btDraw,15000);
 // hidden open counter (silent, never cached, ignored when offline)
 (function(){try{if(!navigator.onLine)return;const A='https://abacus.jasoncameron.dev/hit/vortex453-line-tracker/';
  const hit=k=>fetch(A+k,{cache:'no-store',mode:'cors',credentials:'omit'});
